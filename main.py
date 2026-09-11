@@ -2,5 +2,4 @@
 from handler import *
 
 if __name__ == "__main__":
-    #main()
-    connection_test()
+    main(debug=False)

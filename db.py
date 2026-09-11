@@ -1,11 +1,20 @@
 import sqlite3
 
-# Open a connection to the db with foreign keys enforced.
+# Open a connection to the db with foreign keys enforced
 def get_connection_db(db_path):
     conn = sqlite3.connect(db_path)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys = ON")
     return conn
+
+# Test the connection
+def db_check_connection(conn):
+    try:
+        conn.execute("SELECT 1")
+        return True
+    except sqlite3.Error as e:
+        print(f"db connection check failed: {e}")
+        return False
 
 # Init the db tables, create tables if they dont exist
 def init_db(conn):
