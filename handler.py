@@ -1,18 +1,16 @@
 from monitor import *
 from db import *
-import os
+from pathlib import Path
 from datetime import date
 
 # main
 def main(debug):
-    # DEBUG MODE:
-    debug = False
-
     # List of apps that won't be tracked
     excluded_apps = ["ApplicationFrameHost.exe", "explorer.exe", "TextInputHost.exe", "Taskmgr.exe"]
 
-    # Path of current working directory + file name
-    db_path = os.path.join(os.getcwd(), "app_limiter.db")
+    # Path to app_limiter.db, anchored to this file's location (project root)
+    # so it works regardless of the directory the script was launched from
+    db_path = Path(__file__).resolve().parent / "app_limiter.db"
     if debug:
         print("db_path: ", db_path)
 
@@ -60,9 +58,16 @@ def main(debug):
                 if debug:
                     print("added app: ", process_name)
 
+            if existing_app and existing_app["daily_limit_minutes"] is not None:
+                used_seconds = get_today_usage_db(conn, process_name, today)
+                if used_seconds > existing_app["daily_limit_minutes"] * 60:
+                    kill_process(app)
+
             add_daily_usage_result = add_daily_usage_db(conn, process_name, today, seconds=elapsed)
             if debug: 
                 print("add daily usage: ", add_daily_usage_result, process_name, today, elapsed)
+
+            
 
         # "Focused" tracking only the one active window
         focused_process_name = get_focused_window()
@@ -80,7 +85,7 @@ def main(debug):
 
 # Print db details and try getting data from all 3 tables
 def db_pull_data_test():
-    db_path = os.path.join(os.getcwd(), "app_limiter.db")
+    db_path = Path(__file__).resolve().parent / "app_limiter.db"
     print("db_path: ", db_path)
 
     # Establish a connection

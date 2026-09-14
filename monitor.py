@@ -9,6 +9,8 @@ def get_process(process_name):
         if process.name() == process_name:
             return process
 
+        
+
 # get the seconds, minutes, and hours the process has been running FROM THE SYSTEM
 def get_process_time(process):
     time_elapsed = round(time.time() - process.create_time(), 2)

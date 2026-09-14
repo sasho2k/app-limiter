@@ -8,13 +8,15 @@ def get_connection_db(db_path):
     return conn
 
 # Test the connection
-def db_check_connection(conn):
+def check_connection_db(conn):
     try:
         conn.execute("SELECT 1")
         return True
     except sqlite3.Error as e:
         print(f"db connection check failed: {e}")
         return False
+
+
 
 # Init the db tables, create tables if they dont exist
 def init_db(conn):
@@ -97,6 +99,18 @@ def get_today_usage_db(conn, process_name, date):
     row = cur.fetchone()
     return row["seconds_used"] if row else 0
 
+# Get the earliest date with any recorded usage, None if there's no data yet.
+def get_earliest_usage_date_db(conn):
+    cur = conn.execute("""
+        SELECT MIN(date) as min_date FROM (
+            SELECT date FROM daily_usage
+            UNION
+            SELECT date FROM focused_usage
+        )
+    """)
+    row = cur.fetchone()
+    return row["min_date"] if row and row["min_date"] else None
+
 
 
 # Add the usage by seconds. Returns False (and warns) if process_name isn't registered in apps.
@@ -127,6 +141,7 @@ def add_daily_usage_db(conn, process_name, date, seconds):
         print(f"warning: '{process_name}' is not registered in apps, usage not recorded")
         return False
     return True
+
 
 
 # Update the display name in the db
