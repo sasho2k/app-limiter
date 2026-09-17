@@ -47,6 +47,11 @@ def init_db(conn):
             UNIQUE(app_id, date)
         );
     """)
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS excluded_apps (
+            process_name TEXT PRIMARY KEY
+        );
+    """)
     conn.commit()
 
 
@@ -140,6 +145,41 @@ def add_daily_usage_db(conn, process_name, date, seconds):
     if cur.rowcount == 0:
         print(f"warning: '{process_name}' is not registered in apps, usage not recorded")
         return False
+    return True
+
+
+
+# Add a process name to the excluded_apps list, no dupes
+def add_excluded_app_db(conn, process_name):
+    conn.execute("""
+        INSERT INTO excluded_apps (process_name)
+        VALUES (?)
+        ON CONFLICT(process_name) DO NOTHING
+    """, (process_name,))
+    conn.commit()
+
+# Get all excluded process names as a set
+def get_excluded_apps_db(conn):
+    cur = conn.execute("SELECT process_name FROM excluded_apps")
+    return {row["process_name"] for row in cur.fetchall()}
+
+
+
+# Delete an app and its usage history from the db, and exclude it from future tracking
+def delete_app_db(conn, process_name):
+    cur = conn.execute("SELECT id FROM apps WHERE process_name = ?", (process_name,))
+    row = cur.fetchone()
+    if row is None:
+        print(f"warning: '{process_name}' not found, nothing deleted")
+        return False
+
+    app_id = row["id"]
+    conn.execute("DELETE FROM daily_usage WHERE app_id = ?", (app_id,))
+    conn.execute("DELETE FROM focused_usage WHERE app_id = ?", (app_id,))
+    conn.execute("DELETE FROM apps WHERE id = ?", (app_id,))
+    conn.commit()
+
+    add_excluded_app_db(conn, process_name)
     return True
 
 

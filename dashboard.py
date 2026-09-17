@@ -1,5 +1,5 @@
 import tkinter as tk
-from tkinter import ttk
+from tkinter import ttk, messagebox
 from pathlib import Path
 from datetime import date
 from tkcalendar import DateEntry
@@ -30,6 +30,7 @@ class Dashboard(tk.Tk):
         self.date_picker.bind("<<DateEntrySelected>>", lambda _: self.refresh())
 
         ttk.Button(controls, text="Refresh", command=self.refresh).pack(side="left", padx=5)
+        ttk.Button(controls, text="Delete Selected", command=self.delete_selected).pack(side="left", padx=5)
 
         columns = ("app", "running", "focused", "limit")
         self.tree = ttk.Treeview(self, columns=columns, show="headings", height=8)
@@ -49,6 +50,21 @@ class Dashboard(tk.Tk):
         self._refresh_table(selected_date)
         self._refresh_bar_chart(selected_date)
         self.canvas.draw()
+
+    def delete_selected(self):
+        selection = self.tree.selection()
+        if not selection:
+            return
+
+        process_name = self.tree.item(selection[0], "values")[0]
+        if not messagebox.askyesno(
+            "Delete app",
+            f"Delete '{process_name}' and its usage history?\nIt will also stop being tracked going forward.",
+        ):
+            return
+
+        db.delete_app_db(self.conn, process_name)
+        self.refresh()
 
     def _refresh_table(self, selected_date):
         self.tree.delete(*self.tree.get_children())

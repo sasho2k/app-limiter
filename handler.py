@@ -5,8 +5,8 @@ from datetime import date
 
 # main
 def main(debug):
-    # List of apps that won't be tracked
-    excluded_apps = ["ApplicationFrameHost.exe", "explorer.exe", "TextInputHost.exe", "Taskmgr.exe"]
+    # List of hardcoded apps that won't be tracked.
+    excluded_apps = {"ApplicationFrameHost.exe", "explorer.exe", "TextInputHost.exe", "Taskmgr.exe"}
 
     # Path to app_limiter.db, anchored to this file's location (project root)
     # so it works regardless of the directory the script was launched from
@@ -22,13 +22,18 @@ def main(debug):
     # Init db; Will not overwrite tables if they exist
     init_db(conn)
 
+    # zzz...
     sleep_time = 3
     last_tick = time.time()
 
+    # true
     while True:
         time.sleep(sleep_time)
         if debug:
             print("slept for ", sleep_time)
+
+        # Merge the hardcoded list with apps excluded list from db
+        current_excluded_apps = excluded_apps | get_excluded_apps_db(conn)
 
         # Actual time since the last tick, capped so a system sleep/hibernate
         # gap doesn't get credited as usage
@@ -45,7 +50,7 @@ def main(debug):
         apps = get_foreground_apps()
         for app in apps:
             process_name = app.name()
-            if process_name in excluded_apps:
+            if process_name in current_excluded_apps:
                 continue
             if app.status() != "running":
                 continue
@@ -71,7 +76,7 @@ def main(debug):
 
         # "Focused" tracking only the one active window
         focused_process_name = get_focused_window()
-        if focused_process_name and focused_process_name not in excluded_apps:
+        if focused_process_name and focused_process_name not in current_excluded_apps:
             if get_app_db(conn, focused_process_name):
                 add_focused_usage_result = add_focused_usage_db(conn, focused_process_name, today, seconds=elapsed)
                 if debug:
